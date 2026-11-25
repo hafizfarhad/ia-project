@@ -1,0 +1,18 @@
+[project]
+name = "walletwatch"
+version = "1.0.0"
+description = "Near-real-time AML transaction monitoring for a synthetic mobile wallet (Information Assurance course project)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/export_results.py" = ["E501"]   # LaTeX table templates
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

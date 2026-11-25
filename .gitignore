@@ -1,0 +1,21 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+data/
+models/*.json
+models/*.pkl
+.tamper_backup
+# LaTeX build output (the named PDFs are kept)
+report/*.aux
+report/*.bbl
+report/*.blg
+report/*.log
+report/*.out
+report/main.pdf
+report/proposal.pdf
+report/figures/*.aux
+report/figures/*.log
+report/figures/*.pdf
+report/figures/*.png

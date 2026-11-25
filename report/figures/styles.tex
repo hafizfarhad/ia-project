@@ -1,0 +1,47 @@
+% Shared TikZ look for every diagram in the report: soft fills, rounded corners,
+% blurred drop shadows, one sans-serif face — a clean "diagram tool" finish.
+\usetikzlibrary{arrows.meta,shadows.blur,shapes.geometric,shapes.symbols,fit,backgrounds,positioning,calc}
+
+\definecolor{inkD}{HTML}{1F2937}
+\definecolor{inkM}{HTML}{4B5563}
+\definecolor{inkL}{HTML}{6B7280}
+\definecolor{appF}{HTML}{EEF2FF}\definecolor{appS}{HTML}{4F46E5}
+\definecolor{modF}{HTML}{FFFFFF}\definecolor{modS}{HTML}{818CF8}
+\definecolor{dbF}{HTML}{ECFDF5}\definecolor{dbS}{HTML}{059669}
+\definecolor{wkF}{HTML}{F5F3FF}\definecolor{wkS}{HTML}{7C3AED}
+\definecolor{exF}{HTML}{FFF7ED}\definecolor{exS}{HTML}{EA580C}
+\definecolor{uiF}{HTML}{F0F9FF}\definecolor{uiS}{HTML}{0284C7}
+\definecolor{secF}{HTML}{FEF2F2}\definecolor{secS}{HTML}{DC2626}
+\definecolor{bndS}{HTML}{94A3B8}
+\definecolor{flow}{HTML}{475569}
+
+\tikzset{
+  font=\sffamily\scriptsize, >={Stealth[length=2.2mm,width=1.6mm]},
+  card/.style={rounded corners=2.5pt, line width=0.6pt, align=center, inner sep=4pt,
+               blur shadow={shadow blur steps=6, shadow xshift=0.35mm, shadow yshift=-0.45mm, shadow opacity=22}},
+  app/.style={card, draw=appS, fill=appF},
+  mod/.style={card, draw=modS, fill=modF, minimum width=2.55cm, minimum height=1.02cm, text width=2.4cm},
+  ext/.style={card, draw=exS, fill=exF, minimum width=3.0cm, minimum height=1.25cm, text width=2.85cm},
+  ui/.style={card, draw=uiS, fill=uiF, minimum width=3.0cm, minimum height=1.25cm, text width=2.85cm},
+  wk/.style={card, draw=wkS, fill=wkF, minimum width=2.75cm, minimum height=1.15cm, text width=2.6cm},
+  sec/.style={card, draw=secS, fill=secF, minimum height=0.55cm},
+  db/.style={cylinder, shape border rotate=90, aspect=0.16, draw=dbS, fill=dbF, line width=0.6pt, align=center,
+             blur shadow={shadow blur steps=6, shadow xshift=0.35mm, shadow yshift=-0.45mm, shadow opacity=22}},
+  ttl/.style={font=\sffamily\bfseries\scriptsize, text=inkD},
+  sub/.style={font=\sffamily\tiny, text=inkM},
+  lbl/.style={font=\sffamily\tiny, text=inkM, fill=white, fill opacity=0.92, text opacity=1, inner sep=1.2pt, rounded corners=1pt},
+  arr/.style={->, draw=flow, line width=0.75pt, rounded corners=3pt},
+  arr2/.style={<->, draw=flow, line width=0.75pt, rounded corners=3pt},
+  rdash/.style={->, draw=flow, line width=0.7pt, dashed, dash pattern=on 2.5pt off 1.5pt, rounded corners=3pt},
+  boundary/.style={draw=bndS, line width=0.8pt, dash pattern=on 4pt off 2.5pt, rounded corners=6pt},
+  zonelbl/.style={font=\sffamily\bfseries\tiny, text=inkL, fill=white, inner sep=2pt},
+  badge/.style={circle, fill=#1, text=white, font=\sffamily\bfseries\tiny, inner sep=0.8pt, minimum size=3.4mm},
+}
+
+% A small person glyph: \person{name}{x,y}{label}
+\newcommand{\person}[3]{%
+  \begin{scope}[shift={(#2)}]
+    \fill[uiS!85] (0,0.26) circle (0.11);
+    \fill[uiS!85] (-0.19,-0.02) .. controls (-0.19,0.14) and (0.19,0.14) .. (0.19,-0.02) -- cycle;
+    \node[sub, anchor=north] (#1) at (0,-0.04) {#3};
+  \end{scope}}

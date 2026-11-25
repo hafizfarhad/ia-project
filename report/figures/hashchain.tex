@@ -1,0 +1,18 @@
+% Tamper-evident audit log (Fig. 3). Single-column width.
+\begin{tikzpicture}[x=1cm,y=1cm,
+  ent/.style={card, draw=dbS, fill=dbF, minimum width=2.25cm, minimum height=1.55cm, text width=2.1cm,
+              font=\sffamily\tiny, align=left},
+  bad/.style={card, draw=secS, fill=secF, minimum width=2.25cm, minimum height=1.55cm, text width=2.1cm,
+              font=\sffamily\tiny, align=left}]
+\node[ent] (e1) at (0,0)   {\textbf{\#1} LOGIN\_SUCCESS\\ prev: \texttt{0000\ldots}\\ hash: \texttt{9f2c\ldots}};
+\node[ent] (e2) at (2.75,0) {\textbf{\#2} CASE\_VIEW\\ prev: \texttt{9f2c\ldots}\\ hash: \texttt{41ab\ldots}};
+\node[ent] (e3) at (5.5,0) {\textbf{\#3} STR\_APPROVE\\ prev: \texttt{41ab\ldots}\\ hash: \texttt{c07e\ldots}};
+\draw[arr] (e1) -- (e2); \draw[arr] (e2) -- (e3);
+
+\node[bad] (t2) at (2.75,-2.2) {\textbf{\#2} actor edited\\ prev: \texttt{9f2c\ldots}\\ stored: \texttt{41ab\ldots}\\ recomputed: \texttt{d3f1\ldots}};
+\draw[rdash, draw=secS] (e2) -- node[lbl, right] {superuser disables trigger, rewrites row} (t2);
+\node[font=\sffamily\tiny, text=secS!85!black, align=left, anchor=west] at (4.1,-2.2)
+  {\textbf{/audit/verify}\\first broken link: \#2\\every later hash invalid};
+\node[font=\sffamily\tiny, text=inkM, anchor=north] at (2.75,-3.2)
+  {$h_i = \mathrm{SHA256}(h_{i-1}\,\|\,t_i\,\|\,\mathit{actor}_i\,\|\,\mathit{action}_i\,\|\,\mathit{target}_i\,\|\,\mathit{details}_i)$};
+\end{tikzpicture}

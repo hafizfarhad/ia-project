@@ -1,0 +1,25 @@
+% Case lifecycle with maker-checker (Fig. 2). Single-column width.
+\begin{tikzpicture}[x=1cm,y=1cm,
+  st/.style={card, minimum width=1.95cm, minimum height=0.78cm, text width=1.85cm, font=\sffamily\tiny},
+  open/.style={st, draw=exS, fill=exF}, esc/.style={st, draw=secS, fill=secF},
+  pend/.style={st, draw=wkS, fill=wkF}, done/.style={st, draw=dbS, fill=dbF}, fp/.style={st, draw=uiS, fill=uiF},
+  who/.style={font=\sffamily\tiny\itshape, text=inkL}]
+
+\node[st, draw=appS, fill=appF] (al) at (0,2.2)   {\textbf{Alert}\\evidence + SHA-256};
+\node[open] (op) at (0,0.7)  {\textbf{OPEN}\\one case per account};
+\node[fp]   (fp) at (-2.45,-0.9) {\textbf{CLOSED (FP)}\\reason $\geq$ 20 chars};
+\node[esc]  (es) at (0,-0.9) {\textbf{ESCALATED}\\reason recorded};
+\node[pend] (sp) at (2.45,-0.9) {\textbf{STR\_PENDING}\\narrative drafted};
+\node[done] (sf) at (2.45,-2.35) {\textbf{STR\_FILED}\\export for goAML};
+
+\draw[arr] (al) -- node[lbl, right] {attach / create} (op);
+\draw[arr] (op.west) -| node[who, pos=0.75, left] {analyst} (fp.north);
+\draw[arr] (op) -- node[who, right] {analyst} (es);
+\draw[arr] (es) -- node[who, below, yshift=-1pt] {maker} (sp);
+\draw[arr] (sp) -- node[who, left, align=right] {checker\\MLRO $\neq$ maker} (sf);
+\draw[arr] (sp.north) |- node[who, pos=0.75, above] {MLRO rejects (comment)} (op.east);
+
+\node[sec, font=\sffamily\tiny, text width=6.6cm, anchor=north] at (0,-3.05)
+  {Self-approval returns \textbf{403} and is audited as \texttt{STR\_SELF\_REVIEW\_BLOCKED};\\
+   a DB \texttt{CHECK (reviewed\_by <> drafted\_by)} blocks it even if the API is bypassed.};
+\end{tikzpicture}

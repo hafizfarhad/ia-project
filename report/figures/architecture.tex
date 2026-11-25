@@ -1,0 +1,85 @@
+% System architecture (Fig. 1). Coordinates in cm; scaled to \textwidth by the caller.
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+% ---------------------------------------------------------------- producers and users
+\node[ext] (sim)  at (1.6,5.15) {\textbf{Transaction simulator}\\[1pt]{\tiny 2,000 customers $\cdot$ 10 rings\\look-alikes $\cdot$ 1 day / min}};
+\node[ui]  (dash) at (1.6,3.05) {\textbf{Analyst dashboard}\\[1pt]{\tiny Streamlit $\cdot$ API client only}};
+\person{pA}{0.55,1.05}{Analyst}
+\person{pM}{1.6,1.05}{MLRO}
+\person{pU}{2.65,1.05}{Auditor}
+\foreach \p/\dx in {pA/-1.05, pM/0, pU/1.05}
+  \draw[arr] ($(\p.north)+(0,0.42)$) -- ($(dash.south)+(\dx,0)$);
+\node[sub] at (1.6,0.2) {browser on localhost};
+
+% ---------------------------------------------------------------- API service
+\node[app, minimum width=6.3cm, minimum height=6.05cm] (api) at (8.05,3.25) {};
+\node[ttl, anchor=north west] at ($(api.north west)+(0.12,-0.1)$) {API service};
+\node[sub, anchor=north east] at ($(api.north east)+(-0.12,-0.12)$) {FastAPI $\cdot$ uvicorn $\times$2};
+
+\node[mod] (ing)  at (6.5,5.15) {\textbf{Ingest}\\{\tiny schema validation\\idempotent insert}};
+\node[mod] (auth) at (9.6,5.15) {\textbf{AuthN \& RBAC}\\{\tiny bcrypt $\cdot$ JWT (30 min)\\analyst $\mid$ mlro $\mid$ auditor}};
+\node[mod] (rul)  at (6.5,3.75) {\textbf{Rules engine}\\{\tiny S1 S2 S3 S6\\rolling windows (SQL)}};
+\node[mod] (case) at (9.6,3.75) {\textbf{Cases \& STRs}\\{\tiny workflow states\\maker--checker}};
+\node[mod] (ml)   at (6.5,2.35) {\textbf{ML scorer}\\{\tiny XGBoost $\cdot$ TreeSHAP\\top-5 explanations}};
+\node[mod] (aud)  at (9.6,2.35) {\textbf{Audit logger}\\{\tiny SHA-256 hash chain\\advisory-lock append}};
+\node[sec, minimum width=5.65cm, text width=5.5cm] (mask) at (8.05,1.0)
+      {\textbf{PII masking}\\[1pt]{\tiny CNIC and MSISDN masked in every response\\ unmask: MLRO only, with a reason, audited}};
+
+\draw[arr] (ing) -- node[lbl, left] {txn} (rul);
+\draw[arr] (rul) -- node[lbl, left] {txn} (ml);
+\draw[arr] ($(rul.east)+(0,0.18)$) -- node[lbl, above] {alerts} ($(case.west)+(0,0.18)$);
+\draw[arr] (ml.east) -- ++(0.27,0) |- ($(case.west)+(0,-0.28)$);
+\draw[arr] (case) -- node[lbl, right] {events} (aud);
+\draw[arr] (auth) -- node[lbl, right] {role} (case);
+
+\node[fit=(api), inner sep=5pt, draw=secS!60, line width=0.8pt, dash pattern=on 4pt off 2.5pt, rounded corners=7pt] (tb) {};
+\node[zonelbl, text=secS!80!black, anchor=north west] at ($(tb.south west)+(0.25,0.12)$) {trust boundary $\cdot$ every request authenticated and authorised};
+
+% ---------------------------------------------------------------- data tier
+\node[db, minimum width=2.75cm, minimum height=3.55cm] (pg) at (14.55,3.6) {};
+\node[ttl, text=dbS!65!black, font=\sffamily\bfseries\small] at ($(pg.north)+(0,-0.62)$) {PostgreSQL 16};
+\node[font=\sffamily\scriptsize, text=inkM, align=center, anchor=north] at ($(pg.north)+(0,-0.98)$) {%
+  transactions\\ alerts $\cdot$ cases $\cdot$ strs\\ ml\_scores $\cdot$ users\\[3pt]
+  {\color{secS}\textbf{audit\_log}}\\[-1pt]{\tiny append-only trigger}\\[2pt]
+  {\color{exS}\textbf{ground\_truth}}\\[-1pt]{\tiny evaluator only}};
+
+% ---------------------------------------------------------------- background jobs
+\node[wk] (tr)   at (1.6,-1.6)   {\textbf{Trainer} (one-shot)\\{\tiny 2 worlds $\times$ 60 days\\tested on a held-out seed}};
+\node[db, minimum width=1.35cm, minimum height=1.05cm, draw=wkS, fill=wkF] (vol) at (4.05,-1.6) {};
+\node[sub] at ($(vol.center)+(0,-0.07)$) {models};
+\node[wk] (snap) at (6.5,-1.6)   {\textbf{eval\_snapshots}\\{\tiny aggregate scores only}};
+\node[wk] (gw)   at (10.0,-1.6)  {\textbf{Graph worker}\\{\tiny S4 chains $\cdot$ S5 cycles\\temporal DFS every 5 s}};
+\node[wk] (ev)   at (15.1,-1.6)  {\textbf{Evaluator}\\{\tiny precision $\cdot$ recall\\time to detect}};
+
+% ---------------------------------------------------------------- flows between tiers
+\draw[arr] (sim.east) -- node[lbl, above] {POST /ingest/batch} node[lbl, below] {X-Ingest-Token} (sim.east -| tb.west) -- (ing.west);
+\draw[arr] (sim.north) |- ++(0,0.86) -| (pg.north);
+\node[lbl] at (8.05,6.64) {role \texttt{aml\_sim}: insert accounts and ground truth only};
+\draw[arr2] (dash.east) -- node[lbl, above] {REST} node[lbl, below] {Bearer JWT} (dash.east -| api.west);
+\draw[arr2] ($(api.east)+(0,1.0)$) -- node[lbl, above] {role \texttt{aml\_app}} node[lbl, below, align=center] {no DELETE\\no ground truth} ($(pg.west)+(0,1.0)$);
+\draw[arr] (aud.east) -- ++(0.75,0) |- node[lbl, pos=0.75, below] {INSERT only} ($(pg.west)+(0,-0.9)$);
+\draw[arr2] (gw.north) |- ++(0,0.62) -| node[lbl, pos=0.25, above] {role \texttt{aml\_app}: read 72 h window, write S4 / S5 alerts} ($(pg.south)+(-0.55,0)$);
+\draw[arr] ($(pg.south)+(0.55,0)$) -- ($(pg.south)+(0.55,-2.83)$);
+\node[lbl, anchor=west, align=left] at ($(pg.south)+(0.62,-1.45)$) {role \texttt{aml\_eval}\\read-only};
+\draw[arr] (ev.south) |- ++(0,-0.38) -| node[lbl, pos=0.25, below] {INSERT aggregates} (snap.south);
+\draw[rdash] (snap.north) -- node[lbl, left] {/metrics} (snap.north |- tb.south);
+\draw[arr] (tr.east) -- node[lbl, above] {save} (vol.west);
+\draw[rdash] (vol.north) |- node[lbl, pos=0.25, left, align=right] {read-only\\mount} ($(ml.south west)+(0,0.3)$);
+
+% ---------------------------------------------------------------- outer boundary + legend
+\begin{scope}[on background layer]
+  \draw[boundary] (-0.4,-2.95) rectangle (16.75,7.05);
+\end{scope}
+\node[zonelbl, anchor=east] at (16.6,-2.95) {Docker Compose network $\cdot$ published ports bound to 127.0.0.1 $\cdot$ containers run as non-root};
+
+\matrix[anchor=north west, column sep=3pt, font=\sffamily\tiny, text=inkM] at (-0.35,-3.15) {
+  \node[fill=exF, draw=exS, minimum size=2.2mm, rounded corners=0.6pt]{}; & \node{external producer}; &
+  \node[fill=uiF, draw=uiS, minimum size=2.2mm, rounded corners=0.6pt]{}; & \node{presentation}; &
+  \node[fill=appF, draw=appS, minimum size=2.2mm, rounded corners=0.6pt]{}; & \node{application}; &
+  \node[fill=dbF, draw=dbS, minimum size=2.2mm, rounded corners=0.6pt]{}; & \node{data}; &
+  \node[fill=wkF, draw=wkS, minimum size=2.2mm, rounded corners=0.6pt]{}; & \node{background job}; &
+  \node[fill=secF, draw=secS, minimum size=2.2mm, rounded corners=0.6pt]{}; & \node{security control}; &
+  \draw[arr] (0,0) -- (0.5,0); & \node{data flow}; &
+  \draw[rdash] (0,0) -- (0.5,0); & \node{read / mount}; \\
+};
+\end{tikzpicture}

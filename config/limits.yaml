@@ -1,0 +1,9 @@
+# Wallet tier limits in PKR. Illustrative values based on SBP 2016 branchless-banking limits;
+# not authoritative. null = no limit.
+tiers:
+  L0: { daily: 25000,  monthly: 40000,   max_balance: 200000 }
+  L1: { daily: 50000,  monthly: 80000,   max_balance: 400000 }
+  L2: { daily: 500000, monthly: 2000000, max_balance: null }
+
+# Cash Transaction Report threshold (SBP BPRD CL24, Nov 2026). Not implemented — wallets rarely reach it.
+ctr_threshold: 3000000

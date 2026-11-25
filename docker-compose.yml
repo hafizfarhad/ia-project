@@ -1,0 +1,116 @@
+name: walletwatch
+
+# One image for every Python service. App containers only get the secrets they need —
+# never the Postgres superuser password.
+x-app: &app
+  build: .
+  image: walletwatch-app
+  restart: unless-stopped
+
+x-db: &db
+  DB_HOST: postgres
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: walletwatch
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      EVAL_DB_PASSWORD: ${EVAL_DB_PASSWORD}
+      SIM_DB_PASSWORD: ${SIM_DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"   # localhost only, for dev tools and tests
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d walletwatch"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Trains the model once into the `models` volume (skips if already trained).
+  trainer:
+    <<: *app
+    restart: "no"
+    command: python -m ml.train
+    volumes:
+      - models:/app/models
+
+  api:
+    <<: *app
+    command: sh -c "python -m db.seed_users && uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2"
+    environment:
+      <<: *db
+      DB_USER: aml_app
+      DB_PASSWORD: ${APP_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      INGEST_TOKEN: ${INGEST_TOKEN}
+      AUDIT_HMAC_KEY: ${AUDIT_HMAC_KEY}     # audit chain key: API only, never in the database
+      DEMO_PASSWORD: ${DEMO_PASSWORD}
+    volumes:
+      - models:/app/models:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      trainer: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  worker:
+    <<: *app
+    command: python -m worker.graph_worker
+    environment:
+      <<: *db
+      DB_USER: aml_app
+      DB_PASSWORD: ${APP_DB_PASSWORD}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  evaluator:
+    <<: *app
+    command: python -m ml.evaluate --loop
+    environment:
+      <<: *db
+      DB_USER: aml_eval
+      DB_PASSWORD: ${EVAL_DB_PASSWORD}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  simulator:
+    <<: *app
+    restart: on-failure:3
+    command: python -m simulator.run live
+    environment:
+      <<: *db
+      DB_USER: aml_sim
+      DB_PASSWORD: ${SIM_DB_PASSWORD}
+      API_URL: http://api:8000
+      INGEST_TOKEN: ${INGEST_TOKEN}
+      SIM_SEED: ${SIM_SEED:-42}
+      SIM_DAYS: ${SIM_DAYS:-30}
+      SIM_SPEED: ${SIM_SPEED:-1440}          # simulated seconds per real second (1440 = 1 day/min)
+      SIM_WARMUP_DAYS: ${SIM_WARMUP_DAYS:-3}
+    depends_on:
+      api: { condition: service_healthy }
+
+  dashboard:
+    <<: *app
+    command: streamlit run dashboard/app.py --server.address 0.0.0.0 --server.port 8501 --browser.gatherUsageStats false
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  models:

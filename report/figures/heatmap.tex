@@ -1,0 +1,24 @@
+% Risk heat map (Fig. 4): NIST SP 800-30 style 5x5, inherent -> residual.
+\begin{tikzpicture}[x=0.95cm,y=0.62cm, font=\sffamily\tiny]
+\foreach \l in {1,...,5} \foreach \i in {1,...,5} {
+  \pgfmathtruncatemacro{\sc}{\l*\i}
+  \ifnum\sc>14 \def\c{secS!30}\else\ifnum\sc>7 \def\c{exS!25}\else\ifnum\sc>3 \def\c{yellow!22}\else\def\c{dbS!18}\fi\fi\fi
+  \fill[\c, draw=white, line width=1pt, rounded corners=1.5pt] (\i-1,\l-1) rectangle (\i,\l);
+}
+\foreach \i/\t in {1/Negligible,2/Minor,3/Moderate,4/Major,5/Severe}
+  \node[text=inkM, anchor=north] at (\i-0.5,-0.05) {\t};
+\foreach \l/\t in {1/Rare,2/Unlikely,3/Possible,4/Likely,5/Almost certain}
+  \node[text=inkM, anchor=east] at (-0.08,\l-0.5) {\t};
+\node[text=inkD, font=\sffamily\bfseries\tiny] at (2.5,-0.95) {Impact};
+\node[text=inkD, font=\sffamily\bfseries\tiny, rotate=90] at (-2.0,2.5) {Likelihood};
+% inherent (hollow) -> residual (filled); coordinates = (impact-0.5, likelihood-0.5)
+\foreach \id/\ix/\iy/\rx/\ry in {R1/4.28/3.5/4.28/1.5, R2/3.72/3.5/3.72/2.5, R3/4.72/2.5/4.72/1.5,
+                                   R4/3.28/4.5/3.28/2.5, R5/3.5/1.5/3.5/0.5, R6/2.5/3.5/2.5/1.5} {
+  \draw[->, draw=flow, line width=0.5pt, shorten >=5pt, shorten <=5pt] (\ix,\iy) -- (\rx,\ry);
+  \node[circle, draw=inkD, fill=white, inner sep=0.5pt, minimum size=3.6mm, font=\sffamily\bfseries\tiny] at (\ix,\iy) {\id};
+  \node[circle, fill=inkD, text=white, inner sep=0.5pt, minimum size=3.6mm, font=\sffamily\bfseries\tiny] at (\rx,\ry) {\id};
+}
+\node[anchor=north west, text=inkM, align=left] at (5.15,4.9)
+  {\tikz\node[circle,draw=inkD,minimum size=2.6mm,inner sep=0]{};\ inherent\\[2pt]
+   \tikz\node[circle,fill=inkD,minimum size=2.6mm,inner sep=0]{};\ residual};
+\end{tikzpicture}

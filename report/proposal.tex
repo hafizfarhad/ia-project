@@ -1,0 +1,180 @@
+\documentclass[conference,10pt]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs,tabularx,array}
+\usepackage[table]{xcolor}
+\usepackage{cite}
+\usepackage[expansion=false]{microtype}
+\usepackage{tikz}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+\usepackage{balance}
+\input{figures/styles}
+
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcommand{\tbl}{\scriptsize\renewcommand{\arraystretch}{1.12}}
+
+\begin{document}
+
+\title{Project Proposal --- WalletWatch:\\An Assured, Near-Real-Time AML Monitoring System\\for Mobile Wallets}
+
+\author{\IEEEauthorblockN{Hafiz Farhad Ahmed (22K-4787)}
+\IEEEauthorblockA{Information Assurance --- Course Project\\
+Department of Computer Science, FAST-NUCES Karachi\\
+Instructor: Ali Naseer}}
+
+\maketitle
+
+\begin{abstract}
+We propose to build and assess \emph{WalletWatch}, a working anti-money-laundering (AML) transaction
+monitoring system for a synthetic Pakistani mobile wallet. The system will detect common laundering
+typologies in near real time and give compliance staff a secure investigation and reporting
+workflow. Unusually for detection projects, the monitoring system will itself be treated as the
+asset to be assured: we will apply least privilege, role-based access control, separation of
+duties, data masking and tamper-evident logging, map them to ISO/IEC 27001 and NIST standards,
+assess risk following ISO 31000 and NIST SP 800-30 (including cyber insurance as risk transfer), and
+design a Security Education, Training and Awareness (SETA) programme for its users.
+\end{abstract}
+
+\section{Background and Motivation}
+Mobile wallets let money move instantly and cheaply through agents and person-to-person transfers,
+which also makes them attractive for laundering criminal proceeds~\cite{fatf2013npps}. Pakistani
+reporting entities must monitor transactions and file Suspicious Transaction Reports with the
+Financial Monitoring Unit through goAML~\cite{amla2010,fmu2021ctr}. Rule-based monitoring is known to
+produce very high false-positive rates~\cite{deloitte2020tm}, and the monitoring system concentrates
+sensitive identity data and legally significant decisions. An insider who can suppress alerts,
+approve their own report or alter the audit trail undermines the whole control.
+
+\section{Problem Statement}
+How can a mobile-wallet operator detect laundering patterns in near real time \emph{and} demonstrate
+justified confidence that the monitoring system itself preserves the confidentiality, integrity and
+availability of its data and decisions?
+
+\section{Objectives}
+\begin{enumerate}
+  \item Build a synthetic wallet with planted laundering rings and benign look-alike behaviour,
+        with full ground truth, following the AMLworld methodology~\cite{altman2023amlworld}.
+  \item Detect at least five laundering typologies in near real time, combining rules, temporal
+        graph analysis and one explainable ML model~\cite{chen2016xgboost,lundberg2017shap}.
+  \item Provide an alert $\rightarrow$ case $\rightarrow$ STR workflow with maker--checker approval.
+  \item Implement and test IA controls: RBAC, least-privilege database roles, PII masking and a
+        tamper-evident audit log~\cite{sandhu1996rbac,clarkwilson1987,schneier1999audit}.
+  \item Produce an assurance case, a standards mapping (ISO/IEC 27001:2022, NIST SP 800-53 r5,
+        CSF 2.0), a risk register with treatment, and a SETA programme.
+  \item Measure detection quality (precision, recall, time to detect) honestly against ground truth.
+\end{enumerate}
+
+\section{Scope}
+\textbf{In scope:} the synthetic data generator, the monitoring pipeline, the analyst dashboard,
+security controls, automated tests, and the written assessment and presentation.
+\textbf{Out of scope:} customer-side fraud (account takeover, SIM swap), sanctions screening, goAML
+XML submission, TLS and single sign-on, and any real customer data.
+
+\section{Proposed Approach}
+
+\begin{figure}[t]
+  \centering
+  \resizebox{\columnwidth}{!}{\input{figures/architecture}}
+  \caption{Planned architecture: producer, API trust boundary, data tier with least-privilege roles,
+  background jobs.}
+  \label{fig:arch}
+\end{figure}
+
+The planned architecture (Fig.~\ref{fig:arch}) is a set of containers started with one command.
+A simulator streams transactions to a FastAPI service that validates and stores them, evaluates
+typology rules over rolling windows, and scores them with an XGBoost model explained by TreeSHAP. A
+graph worker searches for time-ordered layering chains and round-trips. A Streamlit dashboard,
+which talks only to the API, serves three roles: analyst, Money Laundering Reporting Officer (MLRO)
+and auditor. A separate evaluator, under a read-only database role, compares alerts with ground
+truth, so the detector never sees the answers.
+
+\section{Information Assurance Considerations}
+
+\begin{table}[t]
+\caption{Planned controls and the standards they address}\label{tab:plan}
+\centering\tbl
+\begin{tabularx}{\columnwidth}{@{}Lll@{}}
+\toprule
+Control & ISO 27001 A. & NIST 800-53 \\ \midrule
+Role-based access control & 5.15, 5.18 & AC-2, AC-3 \\
+Maker--checker STR approval & 5.3 & AC-5 \\
+Least-privilege DB roles & 8.2 & AC-6 \\
+Password hashing, signed tokens & 8.5 & IA-2, IA-5 \\
+PII masking, audited unmask & 8.11, 5.34 & AC-3, SI-19 \\
+Tamper-evident audit log & 8.15 & AU-9, AU-10 \\
+Automated security tests & 8.29 & SA-11 \\
+SETA programme & 6.3 & AT-2, AT-3 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Controls.} Table~\ref{tab:plan} lists the planned controls, mapped to ISO/IEC 27001:2022
+Annex A~\cite{iso27001} and NIST SP 800-53 Rev.~5~\cite{nist80053}.
+
+\textbf{Risk.} We will identify assets and threats, rate inherent and residual risk on 5$\times$5
+scales (NIST SP 800-30~\cite{nist80030}), and choose a treatment for each risk (avoid, mitigate,
+transfer or accept) following ISO 31000 and ISO/IEC 27005~\cite{iso31000,iso27005}. That includes
+whether cyber insurance can transfer part of the financial impact~\cite{romanosky2019insurance}.
+
+\textbf{Assurance.} Each security claim will be backed by an automated test, forming an assurance
+case of claims, arguments and evidence.
+
+\textbf{People.} A SETA programme following NIST SP 800-50 Rev.~1~\cite{nist80050r1} and Whitman and
+Mattord~\cite{whitman2012principles} will cover agents, analysts, MLROs and auditors.
+
+\section{Evaluation Plan}
+\begin{itemize}
+  \item \textbf{ML:} PR-AUC, precision and recall on a held-out synthetic world with a different
+        random seed.
+  \item \textbf{System:} account-level precision and recall per scenario and typology, time to
+        detect per ring, and the number of benign look-alikes flagged.
+  \item \textbf{Security:} automated tests that attempt each violation, such as a forged token, a
+        cross-role action, self-approval, reading ground truth, and editing the audit log.
+\end{itemize}
+
+\section{Deliverables}
+(1) Source code with Docker Compose deployment and test suite; (2) a working live demonstration;
+(3) the project report with architecture, assessment, standards mapping, risk register and SETA
+programme; (4) presentation slides; (5) a viva demonstration script.
+
+\section{Work Plan}
+
+\begin{table}[t]
+\caption{Work plan}\label{tab:plan2}
+\centering\tbl
+\begin{tabularx}{\columnwidth}{@{}lLl@{}}
+\toprule
+Phase & Work & Exit criterion \\ \midrule
+0 & Skeleton, schema, DB roles & stack starts; schema applied \\
+1 & Simulator, look-alikes, ground truth & 60-day dataset generated \\
+2 & Ingest and rules (S1, S2, S3, S6) & alerts with frozen evidence \\
+3 & Security: auth, RBAC, masking, audit chain & security tests pass \\
+4 & Graph worker (S4, S5) & planted rings detected \\
+5 & Dashboard, cases, STR workflow & full flow clickable \\
+6 & ML model with explanations & held-out PR-AUC reported \\
+7 & Evaluation, report, slides & deliverables complete \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Table~\ref{tab:plan2} lists the phases. Each phase ends with a demonstrable exit criterion.
+
+\section{Project Risks}
+\textbf{Scope creep}: mitigated by a written specification with explicit core and stretch features.
+\textbf{Circular evaluation} on synthetic data: mitigated by benign look-alikes, a held-out seed and
+open reporting of false positives.
+\textbf{Unfamiliar AML domain}: mitigated by grounding typologies in FATF and FMU
+guidance~\cite{fatf2012rec,fatf2018pml}.
+
+\section{Ethics and Data}
+Only synthetic data will be used; no real customer, CNIC or phone data is processed. The system is a
+training artefact and produces no reports to any authority.
+
+\balance
+\bibliographystyle{ieeetr}
+\bibliography{refs}
+
+\end{document}
